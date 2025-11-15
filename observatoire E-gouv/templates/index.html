@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observatoire E-Gouv Tchad</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app" v-cloak>
+        <!-- En-tête -->
+        <header class="bg-blue-800 text-white pb-6">
+            <div class="container mx-auto px-4 pt-6">
+                <h1 class="text-2xl font-bold">Observatoire E-Gouv</h1>
+                <p class="text-blue-100">Suivi des infrastructures et institutions connectées</p>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white shadow-sm">
+            <div class="container mx-auto px-4">
+                <div class="flex space-x-2 py-2">
+                    <button @click="activeTab = 'dashboard'" 
+                            :class="{'bg-blue-100 text-blue-800': activeTab === 'dashboard', 'text-gray-600': activeTab !== 'dashboard'}"
+                            class="px-4 py-3 rounded-lg font-medium transition-colors">
+                        📊 Tableau de bord
+                    </button>
+                    <button @click="activeTab = 'institutions'"
+                            :class="{'bg-blue-100 text-blue-800': activeTab === 'institutions', 'text-gray-600': activeTab !== 'institutions'}"
+                            class="px-4 py-3 rounded-lg font-medium transition-colors">
+                        🏛️ Institutions
+                    </button>
+                    <button @click="activeTab = 'infrastructure'"
+                            :class="{'bg-blue-100 text-blue-800': activeTab === 'infrastructure', 'text-gray-600': activeTab !== 'infrastructure'}"
+                            class="px-4 py-3 rounded-lg font-medium transition-colors">
+                        🌐 Infrastructure
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Contenu principal -->
+        <main class="container mx-auto px-4 py-6">
+            <!-- Tableau de bord -->
+            <div v-show="activeTab === 'dashboard'" class="space-y-6">
+                <!-- Cartes de statistiques -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+                        <h3 class="text-gray-500 text-sm font-medium">Total Institutions</h3>
+                        <p class="text-2xl font-bold mt-2" v-text="stats.total"></p>
+                        <p class="text-xs text-gray-400 mt-1" v-text="'au ' + currentDate"></p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+                        <h3 class="text-gray-500 text-sm font-medium">Connectées</h3>
+                        <p class="text-2xl font-bold mt-2 text-green-600" v-text="stats.connectees"></p>
+                        <p class="text-xs text-gray-400 mt-1" v-text="stats.tauxConnexion + '% du total'"></p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
+                        <h3 class="text-gray-500 text-sm font-medium">Non Connectées</h3>
+                        <p class="text-2xl font-bold mt-2 text-red-600" v-text="stats.nonConnectees"></p>
+                        <p class="text-xs text-gray-400 mt-1" v-text="(100 - stats.tauxConnexion) + '% du total'"></p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow p-6 border-l-4 border-purple-500">
+                        <h3 class="text-gray-500 text-sm font-medium">Taux de Connexion</h3>
+                        <p class="text-2xl font-bold mt-2 text-purple-600" v-text="stats.tauxConnexion + '%'"></p>
+                        <p class="text-xs text-gray-400 mt-1">Objectif: 100%</p>
+                    </div>
+                </div>
+
+                <!-- Graphiques -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Répartition des connexions</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Statistiques de connexion</h3>
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des institutions -->
+            <div v-show="activeTab === 'institutions'" class="space-y-4">
+                <div class="bg-white rounded-xl shadow overflow-hidden" v-for="institution in institutions" :key="institution.id">
+                    <div class="p-4 border-b border-gray-100">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-gray-800">
+                                    🏛️ <span v-text="institution.nom"></span>
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1" v-text="institution.type"></p>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    📍 <span v-text="institution.ville"></span>
+                                </p>
+                            </div>
+                            <span :class="{
+                                'bg-green-100 text-green-800': institution.statut === 'connecté',
+                                'bg-red-100 text-red-800': institution.statut === 'non connecté'
+                            }" class="px-3 py-1 rounded-full text-xs font-medium">
+                                <span v-if="institution.statut === 'connecté'">📡</span>
+                                <span v-else>❌</span>
+                                <span v-text="institution.statut"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div v-if="institution.statut === 'connecté'" class="p-4 bg-gray-50">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-500">Bande passante :</p>
+                                <p class="font-medium" v-text="institution.bande"></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-500">Connecté le :</p>
+                                <p class="font-medium" v-text="institution.dateConnexion"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Infrastructure -->
+            <div v-show="activeTab === 'infrastructure'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="item in infrastructure" :key="item.id" 
+                     :class="{'bg-gray-50': item.statut === 'projet futur', 'bg-white': item.statut !== 'projet futur'}"
+                     class="rounded-xl shadow p-4">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-semibold text-gray-800">
+                            📍 <span v-text="item.region"></span>
+                        </h3>
+                        <span v-if="item.statut === 'projet futur'" 
+                              class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                            Projet Futur
+                        </span>
+                        <span v-else class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                            Opérationnel
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Longueur de fibre :</span>
+                            <span class="font-medium" v-text="item.longueurFibre + ' km'"></span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Chambres de raccordement :</span>
+                            <span class="font-medium" v-text="item.chambres"></span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Points d'accès :</span>
+                            <span class="font-medium" v-text="item.pointsAcces"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.2.31/dist/vue.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        const { createApp } = Vue;
+
+        // Récupérer les données depuis Flask
+        const statsData = {{ stats | tojson | safe }};
+        const institutionsData = {{ institutions | tojson | safe }};
+        const infrastructureData = {{ infrastructure | tojson | safe }};
+        const currentDateData = "{{ current_date }}";
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'dashboard',
+                    institutions: institutionsData,
+                    infrastructure: infrastructureData,
+                    stats: statsData,
+                    currentDate: currentDateData,
+                    pieChart: null,
+                    barChart: null
+                }
+            },
+            mounted() {
+                // Initialiser les graphiques après le montage
+                setTimeout(() => {
+                    this.initCharts();
+                }, 100);
+            },
+            watch: {
+                activeTab(newTab) {
+                    if (newTab === 'dashboard') {
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                this.initCharts();
+                            }, 100);
+                        });
+                    }
+                }
+            },
+            methods: {
+                initCharts() {
+                    const pieCanvas = document.getElementById('pieChart');
+                    const barCanvas = document.getElementById('barChart');
+                    
+                    if (!pieCanvas || !barCanvas) {
+                        console.error('Canvas non trouvés');
+                        return;
+                    }
+
+                    // Détruire les anciens graphiques
+                    if (this.pieChart) {
+                        this.pieChart.destroy();
+                        this.pieChart = null;
+                    }
+                    if (this.barChart) {
+                        this.barChart.destroy();
+                        this.barChart = null;
+                    }
+
+                    // Graphique circulaire
+                    try {
+                        const pieCtx = pieCanvas.getContext('2d');
+                        this.pieChart = new Chart(pieCtx, {
+                            type: 'pie',
+                            data: {
+                                labels: ['Connectées', 'Non connectées'],
+                                datasets: [{
+                                    data: [this.stats.connectees, this.stats.nonConnectees],
+                                    backgroundColor: ['#10B981', '#EF4444'],
+                                    borderWidth: 2,
+                                    borderColor: '#fff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            boxWidth: 15,
+                                            padding: 15,
+                                            font: {
+                                                size: 12
+                                            }
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                const label = context.label || '';
+                                                const value = context.raw || 0;
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const percentage = Math.round((value / total) * 100);
+                                                return label + ': ' + value + ' (' + percentage + '%)';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Erreur création pie chart:', error);
+                    }
+
+                    // Graphique à barres
+                    try {
+                        const barCtx = barCanvas.getContext('2d');
+                        this.barChart = new Chart(barCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Connectées', 'Non connectées', 'Total'],
+                                datasets: [{
+                                    label: 'Nombre',
+                                    data: [this.stats.connectees, this.stats.nonConnectees, this.stats.total],
+                                    backgroundColor: ['#10B981', '#EF4444', '#3B82F6'],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            stepSize: 1,
+                                            precision: 0
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Erreur création bar chart:', error);
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
